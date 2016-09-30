@@ -39,7 +39,7 @@ Game::Tibia::Packet - Session layer support for the MMORPG Tibia
 
     # encrypt a Tibia speech packet
     my $p = Game::Tibia::Packet->new;
-    $p->payload .= pack("C S S S/A S C SSC S/A", #  V Talk mode?
+    $p->payload .= pack("C S S S/A S C SSC S/A",
         0xAA, 0x1, 0x0, "Perl", 0, 1, 1, 1, 8,
         "Game::Tibia::Packet says Hi!\n:-)");
     $sock->send($p->finalize($xtea_key}))
@@ -173,6 +173,8 @@ __END__
 L<http://github.com/athreef/Game-Tibia-Packet>
 
 =head1 SEE ALSO
+
+The protocol was reverse engineered as part of writing my L<Tibia Wireshark Plugin|https://github.com/a3f/Tibia-Wireshark-Plugin>.
 
 L<http://tpforums.org/forum/forum.php>
 L<http://tibia.com>
