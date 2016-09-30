@@ -1,0 +1,6 @@
+.build/
+*.sw*
+.DS_Store
+Game-Tibia-Packet-*/
+Game-Tibia-Packet-*.tar.gz
+
