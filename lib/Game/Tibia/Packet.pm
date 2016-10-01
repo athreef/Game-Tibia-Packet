@@ -6,7 +6,7 @@ package Game::Tibia::Packet;
 # VERSION
 
 use Digest::Adler32 qw(adler32);
-use Crypt::XTEA;
+use Crypt::XTEA v0.010.7;
 
 # XXX workaround for Crypt::XTEA's errornous definitions
 # Fix is pushed to Github and awaits author's release
@@ -17,7 +17,7 @@ no warnings 'prototype';
 *Crypt::XTEA::blocksize = sub { 8 };
 use strict;
 use warnings;
-use Crypt::ECB;
+use Crypt::ECB v2.00;
 
 =pod
 
