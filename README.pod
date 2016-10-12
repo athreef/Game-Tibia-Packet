@@ -12,7 +12,7 @@ Game::Tibia::Packet - Session layer support for the MMORPG Tibia
 
     # decrypt Tibia packet
     my $read; my $ret = $sock->recv($read, 1024);
-    my $res = Game::Tibia::Packet->new($read, $xtea_key);
+    my $res = Game::Tibia::Packet->new(packet => $read, xtea => $xtea_key);
     $packet_type = unpack('C', $res->payload);
 
 
@@ -32,17 +32,17 @@ Game::Tibia::Packet - Session layer support for the MMORPG Tibia
 
 =head1 DESCRIPTION
 
-Methods for constructing Tibia packets. Doesn't handle the XTEA key exchange yet, only what comes after it. i.e. It doesn't do that much besides calculating Adler32 digest and XTEA encryption.
+Methods for constructing Tibia Gameserver (XTEA) packets. Handles checksum calculation and symmetric encryption depending on the requested Tibia version.
 
-Tested working with Tibia 8.6, but will probably work with later protocol versions too.
+Tested working with Tibia 8.1, but will probably work with other protocol versions too.
 
 =head1 METHODS AND ARGUMENTS
 
 =over 4
 
-=item new([$payload, $xtea])
+=item new([packet => $payload, xtea => $xtea, version => 860])
 
-Constructs a new Game::Tibia::Packet instance. If payload and XTEA are given, the payload will be decrypted and trimmed to correct size. 
+Constructs a new Game::Tibia::Packet instance. If payload and XTEA are given, the payload will be decrypted and trimmed to correct size. version argument defaults to 860.
 
 =item isValid($packet)
 
@@ -56,6 +56,15 @@ returns the payload as lvalue (so you can concat on it)
 
 Finalizes the packet. XTEA encrypts, prepends checksum and length.
 
+=item version($version)
+
+Returns a hash reference with size information about a protocol version.
+For example, for 860 it returns:
+
+    {XTEA => 16, RSA => 128, ADLER32 => 4, ACCNUM => 0, GET_CHARLIST => 147, LOGIN_CHAR => 135}
+
+Sizes are in bytes.
+
 =back
 
 =head1 GIT REPOSITORY
@@ -65,6 +74,10 @@ L<http://github.com/athreef/Game-Tibia-Packet>
 =head1 SEE ALSO
 
 The protocol was reverse engineered as part of writing my L<Tibia Wireshark Plugin|https://github.com/a3f/Tibia-Wireshark-Plugin>.
+
+L<Game::Tibia::Packet::Login>
+
+L<Game::Tibia::Packet::Charlist>
 
 L<http://tpforums.org/forum/forum.php>
 L<http://tibia.com>

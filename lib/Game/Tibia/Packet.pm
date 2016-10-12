@@ -6,18 +6,12 @@ package Game::Tibia::Packet;
 # VERSION
 
 use Digest::Adler32 qw(adler32);
-use Crypt::XTEA v0.010.7;
-
-# XXX workaround for Crypt::XTEA's errornous definitions
-# Fix is pushed to Github and awaits author's release
-# https://github.com/JaHIY/Crypt-XTEA/issues/3
-no warnings 'redefine';
-no warnings 'prototype';
-*Crypt::XTEA::keysize = sub { 16 };
-*Crypt::XTEA::blocksize = sub { 8 };
-use strict;
-use warnings;
+use Crypt::XTEA v0.010.8;
 use Crypt::ECB v2.00;
+use Carp;
+
+sub version;
+my $default = Game::Tibia::Packet::version(860);
 
 =pod
 
@@ -33,7 +27,7 @@ Game::Tibia::Packet - Session layer support for the MMORPG Tibia
 
     # decrypt Tibia packet
     my $read; my $ret = $sock->recv($read, 1024);
-    my $res = Game::Tibia::Packet->new($read, $xtea_key);
+    my $res = Game::Tibia::Packet->new(packet => $read, xtea => $xtea_key);
     $packet_type = unpack('C', $res->payload);
 
 
@@ -53,45 +47,45 @@ Game::Tibia::Packet - Session layer support for the MMORPG Tibia
 
 =head1 DESCRIPTION
 
-Methods for constructing Tibia packets. Doesn't handle the XTEA key exchange yet, only what comes after it. i.e. It doesn't do that much besides calculating Adler32 digest and XTEA encryption.
+Methods for constructing Tibia Gameserver (XTEA) packets. Handles checksum calculation and symmetric encryption depending on the requested Tibia version.
 
-Tested working with Tibia 8.6, but will probably work with later protocol versions too.
+Tested working with Tibia 8.1, but will probably work with other protocol versions too.
 
 =head1 METHODS AND ARGUMENTS
 
 =over 4
 
-=item new([$payload, $xtea])
+=item new([packet => $payload, xtea => $xtea, version => 860])
 
-Constructs a new Game::Tibia::Packet instance. If payload and XTEA are given, the payload will be decrypted and trimmed to correct size. 
+Constructs a new Game::Tibia::Packet instance. If payload and XTEA are given, the payload will be decrypted and trimmed to correct size. version argument defaults to 860.
 
 =cut
 
 sub new {
 	my $type = shift;
 	my $self = {
-        payload => shift || '',
-        xtea => shift,
+        payload => '',
+        packet => '',
+        xtea => undef,
+        version => $default,
+        padding => '',
+        @_
     };
-    if ($self->{payload} ne '')
+    $self->{version} = version $self->{version} unless ref $self->{version};
+    if ($self->{packet} ne '')
     {
-        #return undef unless isValid($self->{payload});
+        #return undef unless isValid($self->{packet});
         my $ecb = Crypt::ECB->new(
             -cipher => Crypt::XTEA->new($self->{xtea}, 32, little_endian => 1)
         );
         $ecb->padding('null');
  
-        $self->{payload} = $ecb->decrypt(substr($self->{payload}, 6));
-        $self->{payload} = substr $self->{payload}, 2, unpack('v', $self->{payload});
+        my $digest_size = $self->{version}{ADLER32};
+        $self->{payload} = $ecb->decrypt(substr($self->{packet}, 2 + $digest_size));
+        $self->{payload} .= "\0" x ((8 - length($self->{payload})% 8)%8);
+        $self->{padding} = substr $self->{payload}, 2 + unpack('v', $self->{payload});
+        $self->{payload} = substr $self->{payload}, 2,  unpack('v', $self->{payload});
     }
-
-	%{$self->{FLAGS}} = 
-	(
-		XTEA => 1,
-		ADLER32 => 1,
-		RSA => 0,
-		VER => 8.72,
-	);
 
 	bless $self, $type;
 	return $self;
@@ -139,22 +133,27 @@ sub finalize {
     my $XTEA = $self->{xtea} // shift;
 
 	my $packet = $self->{payload};
-	if ($self->{FLAGS}{XTEA} and defined $XTEA) {
-		$packet = CORE::pack('v', length $packet) . $packet;
+	if ($self->{version}{XTEA} and defined $XTEA) {
+		$packet = pack('v', length $packet) . $packet;
         
         my $ecb = Crypt::ECB->new(
             -cipher => Crypt::XTEA->new($XTEA, 32, little_endian => 1)
         );
         $ecb->padding('null');
  
+        # $packet .= "\0" x ((8 - length($packet)% 8)%8);
+        my $padding_len = (8 - length($packet)% 8)%8;
+        $packet .= pack("a$padding_len", unpack('a*', $self->{padding}));
+        my $orig_len = length $packet;
         $packet = $ecb->encrypt($packet);
+        substr($packet, $orig_len) = '';
     }
 
 	my $digest = '';
-	if ($self->{FLAGS}{ADLER32}) {
+	if ($self->{version}{ADLER32}) {
 		my $a32 = Digest::Adler32->new;
 		$a32->add($packet);
-		$digest = reverse $a32->digest;
+        $digest = unpack 'H*', pack 'N', unpack 'L', $a32->digest;
 	}
 
 	$packet = CORE::pack("S/a", $digest.$packet);
@@ -162,6 +161,35 @@ sub finalize {
 	$packet;
 }
 
+
+=item version($version)
+
+Returns a hash reference with size information about a protocol version.
+For example, for 860 it returns:
+
+    {XTEA => 16, RSA => 128, ADLER32 => 4, ACCNUM => 0, GET_CHARLIST => 147, LOGIN_CHAR => 135}
+
+Sizes are in bytes.
+
+=cut 
+
+sub version {
+    my $ver = shift;
+    $ver = $ver->{VERSION} if ref $ver;
+    $ver =~ s/^v|[ .]//g;
+    $ver =~ /^\d+/ or croak 'Version format invalid';
+
+    my $sizes = $ver >= 830 ? {XTEA => 16, RSA => 128, ADLER32 => 4, ACCNUM => 0,
+                               GET_CHARLIST => 147, LOGIN_CHAR => 135}
+
+              : $ver >= 761 ? {XTEA => 16, RSA => 128, ADLER32 => 0, ACCNUM => 4,
+                               GET_CHARLIST => 143, LOGIN_CHAR => 131}
+
+                             : {XTEA => 0, RSA => 0, ADLER32 => 0, ACCNUM => 4,
+                               GET_CHARLIST => undef, LOGIN_CHAR => undef};
+    $sizes->{VERSION} = $ver;
+    return $sizes;
+}
 
 1;
 __END__
@@ -175,6 +203,10 @@ L<http://github.com/athreef/Game-Tibia-Packet>
 =head1 SEE ALSO
 
 The protocol was reverse engineered as part of writing my L<Tibia Wireshark Plugin|https://github.com/a3f/Tibia-Wireshark-Plugin>.
+
+L<Game::Tibia::Packet::Login>
+
+L<Game::Tibia::Packet::Charlist>
 
 L<http://tpforums.org/forum/forum.php>
 L<http://tibia.com>
