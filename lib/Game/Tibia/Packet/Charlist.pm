@@ -10,6 +10,7 @@ use Game::Tibia::Packet;
 
 use constant DLG_MOTD     => 0x14;
 use constant DLG_INFO     => 0x15;
+use constant DLG_ERROR    => 0x0a;
 use constant DLG_CHARLIST => 0x64;
 
 my $default = Game::Tibia::Packet::version(860);
@@ -80,11 +81,13 @@ sub new {
             ($self->{motd}, $payload) = unpack '(S/a)< a*', $payload;
         } elsif ($type eq DLG_INFO) {
             ($self->{info}, $payload) = unpack '(S/a)< a*', $payload;
+        } elsif ($type eq DLG_ERROR) {
+            ($self->{error}, $payload) = unpack '(S/a)< a*', $payload;
         }
         ($type, $payload) = unpack 'Ca*', $payload;
         if ($type eq DLG_CHARLIST) {
             (my $count, $payload) = unpack 'Ca*', $payload;
-            $self->{characters} = [];
+            $self->{characters} = undef;
             my @chars;
             while ($count--) {
                 my $char;
@@ -115,8 +118,10 @@ sub finalize {
 
     my $packet = Game::Tibia::Packet->new(version => $self->{version});
     $packet->payload .= pack '(C S/a)<', DLG_MOTD, $self->{motd} if defined $self->{motd};
+    $packet->payload .= pack '(C S/a)<', DLG_INFO, $self->{info} if defined $self->{info};
+    $packet->payload .= pack '(C S/a)<', DLG_ERROR, $self->{error} if defined $self->{error};
+    if (defined $self->{characters} && @{$self->{characters}} > 0) {
     $packet->payload .= pack 'C C', DLG_CHARLIST, scalar @{$self->{characters}};
-    if (@{$self->{characters}} > 0) {
         foreach my $char (@{$self->{characters}}) {
             $packet->payload .= pack '(S/a S/a a4 S)<',
                 $char->{name}, $char->{world}{name}, 
