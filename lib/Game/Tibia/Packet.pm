@@ -6,8 +6,8 @@ package Game::Tibia::Packet;
 # VERSION
 
 use Digest::Adler32 qw(adler32);
-use Crypt::XTEA v0.010.8;
-use Crypt::ECB v2.00;
+use Crypt::XTEA 0.0108;
+use Crypt::ECB 2.0.0;
 use Carp;
 
 sub version;
