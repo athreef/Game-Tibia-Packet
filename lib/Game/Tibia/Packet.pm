@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use v5.16.0;
 package Game::Tibia::Packet;
 
 # ABSTRACT: Minimal session layer support for the MMORPG Tibia

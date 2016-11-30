@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use v5.16.0;
 package Game::Tibia::Packet::Charlist;
 
 # ABSTRACT: Character list packet support for the MMORPG Tibia
