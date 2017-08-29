@@ -14,8 +14,6 @@ use constant DLG_INFO     => 0x15;
 use constant DLG_ERROR    => 0x0a;
 use constant DLG_CHARLIST => 0x64;
 
-my $default = Game::Tibia::Packet::version(860);
-
 =pod
 
 =encoding utf8
@@ -49,9 +47,9 @@ Decodes Tibia Login packets into hashes and vice versa.
 
 =over 4
 
-=item new([packet => $packet, xtea => $xtea, version => 860])
+=item new([packet => $packet, version => $version, xtea => $xtea])
 
-Constructs a new Game::Tibia::Packet::Charlist instance. When C<packet> and C<xtea> are specified, the supplied packet is decrypted and is then retrievable with the C<payload> subroutine.
+Constructs a new Game::Tibia::Packet::Charlist instance of version C<$version>. When C<packet> and C<xtea> are specified, the supplied packet is decrypted and is then retrievable with the C<payload> subroutine.
 
 =cut
 
@@ -61,13 +59,13 @@ sub new {
 	my $self = {
         packet => undef,
         xtea    => undef,
-        version => $default,
 
         @_
     };
 
+    croak " 761 <= protocol version < 980 isn't satisfied" if !defined $self->{version} || ! (761 <= $self->{version} && $self->{version} < 980);
     croak "Packet was specified without XTEA key" if defined $self->{packet} && !defined $self->{xtea};
-    $self->{version} = Game::Tibia::Packet::version $self->{version} unless ref $self->{version};
+    $self->{versions}{client} = Game::Tibia::Packet::version $self->{version} unless ref $self->{version};
 
     if (defined $self->{packet}) {
         my $packet = Game::Tibia::Packet->new(

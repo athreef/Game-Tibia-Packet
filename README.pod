@@ -34,19 +34,19 @@ Game::Tibia::Packet - Session layer support for the MMORPG Tibia
 
 Methods for constructing Tibia Gameserver (XTEA) packets. Handles checksum calculation and symmetric encryption depending on the requested Tibia version.
 
-Tested working with Tibia 8.1, but will probably work with other protocol versions too.
+Should work with all Tibia versions less than 9.80.
 
 =head1 METHODS AND ARGUMENTS
 
 =over 4
 
-=item new([packet => $payload, xtea => $xtea, version => 860])
+=item new(version => $version, [packet => $payload, xtea => $xtea])
 
-Constructs a new Game::Tibia::Packet instance. If payload and XTEA are given, the payload will be decrypted and trimmed to correct size. version argument defaults to 860.
+Constructs a new Game::Tibia::Packet instance of version C<$version>. If payload and XTEA are given, the payload will be decrypted and trimmed to correct size.
 
 =item isValid($packet)
 
-Checks if packet's adler32 digest matches (A totally unnecessary thing on Cipsoft's part, as we already have TCP checksum. Why hash again?) 
+Checks if packet's adler32 digest matches (A totally unnecessary thing on Cipsoft's part, as we already have TCP checksum. Why hash again?)
 
 =item payload() : lvalue
 
@@ -58,12 +58,10 @@ Finalizes the packet. XTEA encrypts, prepends checksum and length.
 
 =item version($version)
 
-Returns a hash reference with size information about a protocol version.
-For example, for 860 it returns:
+Returns a hash reference with protocol traits. For example for 840, it returns:
 
-    {XTEA => 16, RSA => 128, ADLER32 => 4, ACCNUM => 0, GET_CHARLIST => 147, LOGIN_CHAR => 135}
-
-Sizes are in bytes.
+    { gmbyte => 1, outfit_addons => 1, adler32 => 1, acc_name => 1,
+      stamina => 1, xtea => 1, VERSION => 840, rsa => 1, lvl_on_msg => 1 };
 
 =back
 
@@ -75,9 +73,12 @@ L<http://github.com/athreef/Game-Tibia-Packet>
 
 The protocol was reverse engineered as part of writing my L<Tibia Wireshark Plugin|https://github.com/a3f/Tibia-Wireshark-Plugin>.
 
+L<Game::Tibia::Cam>
+
 L<Game::Tibia::Packet::Login>
 
 L<Game::Tibia::Packet::Charlist>
+
 
 L<http://tpforums.org/forum/forum.php>
 L<http://tibia.com>
