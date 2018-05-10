@@ -165,7 +165,7 @@ sub finalize {
     if ($self->{versions}{client}{adler32}) {
         my $a32 = Digest::Adler32->new;
         $a32->add($packet);
-        $digest = unpack 'H*', pack 'N', unpack 'L', $a32->digest;
+        $digest = pack "N", unpack "L", $a32->digest;
     }
 
     $packet = CORE::pack("S/a", $digest.$packet);
