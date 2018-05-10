@@ -119,7 +119,7 @@ Finalizes the packet. encrypts with XTEA and prepends header
 
 
 sub finalize {
-	my $self = shift;
+    my $self = shift;
     my $xtea = shift // $self->{xtea};
 
     my $packet = Game::Tibia::Packet->new(version => $self->{version});

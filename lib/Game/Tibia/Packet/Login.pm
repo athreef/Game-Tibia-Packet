@@ -78,8 +78,10 @@ sub new {
     }
 
     if (defined $self->{packet}) {
-        (my $len, $self->{os}, $self->{versions}{client}{VERSION}, $self->{versions}{spr}, $self->{versions}{dat}, $self->{versions}{pic}, my $payload)
-            = unpack 'v x(S S L3)< a*', $self->{packet};
+        (my $len, my $cmd, $self->{os}, $self->{versions}{client}{VERSION}, $self->{versions}{spr}, $self->{versions}{dat}, $self->{versions}{pic}, my $payload)
+            = unpack 'v C (S S L3)< a*', $self->{packet};
+
+        croak "Expected GET_CHARLIST packet type (0x01, but got $cmd)" if $cmd ne 0x1;
 
         if ($self->{versions}{client}{rsa}) {
             $payload = $self->{rsa}->decrypt($payload);
@@ -88,7 +90,7 @@ sub new {
         }
 
         if ($self->{versions}{client}{xtea}) {
-            ($self->{XTEA}, $payload) = unpack 'a16 a*', $payload;
+            ($self->{xtea}, $payload) = unpack 'a16 a*', $payload;
         }
 
         my $acc_data_pattern = $self->{versions}{client}{accname} ? '(S/a S/a)<' : '(V S/a)<';
@@ -129,7 +131,7 @@ sub finalize {
 
     my $acc_pattern = $self->{versions}{client}{acc_name} ? '(S/a)<' : 'V';
 
-    $payload .= $self->{XTEA} if $self->{versions}{client}{xtea};
+    $payload .= $self->{xtea} if $self->{versions}{client}{xtea};
     $payload .= pack $acc_pattern, $self->{account};
     $payload .= pack '(S/a)<', $self->{character} if defined $self->{character};
     $payload .= pack '(S/a)<', $self->{password};
