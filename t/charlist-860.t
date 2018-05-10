@@ -1,11 +1,10 @@
 use Test::More;
 use Test::HexString;
 
-BEGIN {
-    use_ok 'Game::Tibia::Packet::Charlist';
-}
+use Game::Tibia::Packet::Charlist tibia => 860;
 
-my $instance = Game::Tibia::Packet::Charlist->new(version => 860);
+my $instance = Game::Tibia::Packet::Charlist->new;
+ok $instance;
 
 done_testing;
 

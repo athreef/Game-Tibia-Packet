@@ -11,8 +11,6 @@ use Crypt::XTEA 0.0108;
 use Crypt::ECB 2.0.0;
 use Carp;
 
-sub version;
-
 =pod
 
 =encoding utf8
@@ -51,6 +49,14 @@ Methods for constructing Tibia Gameserver (XTEA) packets. Handles checksum calcu
 
 Should work with all Tibia versions less than 9.80.
 
+=cut
+
+my %params;
+sub import {
+    (undef, %params) = (shift, %params, @_);
+    die "Malformed Tibia version\n" if exists $params{tibia} && $params{tibia} !~ /^\d+$/;
+}
+
 =head1 METHODS AND ARGUMENTS
 
 =over 4
@@ -61,6 +67,8 @@ Constructs a new Game::Tibia::Packet instance of version C<$version>. If payload
 
 =cut
 
+sub version;
+
 sub new {
     my $type = shift;
     my $self = {
@@ -68,10 +76,12 @@ sub new {
         packet => '',
         xtea => undef,
         padding => '',
+        version => $params{tibia},
         @_
     };
 
     croak 'A protocol version < 9.80 must be supplied' if !defined $self->{version} || $self->{version} >= 980;
+
     $self->{versions}{client} = version $self->{version} unless ref $self->{version};
 
     if ($self->{packet} ne '')

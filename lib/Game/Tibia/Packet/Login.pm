@@ -34,8 +34,14 @@ Decodes Tibia Login packets into hashes and vice versa. By default uses the OTSe
 
 =cut
 
+our %params;
+sub import {
+    (undef, %params) = (shift, %params, @_);
+    die "Malformed Tibia version\n" if exists $params{tibia} && $params{tibia} !~ /^\d+$/;
+}
+
 my $otserv = Crypt::OpenSSL::RSA->new_private_key(
-    do { local $/; open my $rsa, dist_file('Game-Tibia-Packet', 'otserv.private') or die "Couldn't open private key $!"; <$rsa>; }
+    do { local $/; open my $rsa, '<', dist_file('Game-Tibia-Packet', 'otserv.private') or die "Couldn't open private key $!"; <$rsa>; }
 );
 
 =head1 METHODS AND ARGUMENTS
@@ -50,7 +56,7 @@ Constructs a new C<Game::Tibia::Packet::Login> instance of version C<$version>. 
 
 sub new {
     my $class = shift;
-    
+
     my $self = {
         packet => undef,
         rsa    => $otserv,
@@ -59,6 +65,7 @@ sub new {
     };
 
     $self->{version} //= $self->{versions}{client}{VERSION};
+    $self->{version} //= $params{tibia};
     croak 'A protocol version < 9.80 must be supplied' if !defined $self->{version} || $self->{version} >= 980;
 
     $self->{versions}{client} = Game::Tibia::Packet::version($self->{version});
