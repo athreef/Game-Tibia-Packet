@@ -6,7 +6,7 @@ package Game::Tibia::Packet;
 # ABSTRACT: Minimal session layer support for the MMORPG Tibia
 # VERSION
 
-use Digest::Adler32 qw(adler32);
+use Digest::Adler32;
 use Crypt::XTEA 0.0108;
 use Crypt::ECB 2.0.0;
 use Carp;
